@@ -12,10 +12,13 @@ const MODEL = "grok-2-1212";
 const QUICK_EMOJIS = ["👍", "✅", "😊", "🎉", "❤️", "🤔", "🔥", "👏", "👌", "🙌"];
 
 // One source of truth for which (if any) picker is open
+// --- UI state: only one picker can ever be open ---
 type ActivePicker =
   | null
   | { kind: "composer" }
   | { kind: "reaction"; index: number };
+
+const [activePicker, setActivePicker] = useState<ActivePicker>(null);
 
 export default function CayaChat({
   open,
@@ -208,6 +211,13 @@ export default function CayaChat({
             transition={{ type: "spring", stiffness: 320, damping: 24, mass: 0.6 }}
             onClick={(e) => e.stopPropagation()} // prevent backdrop close when clicking inside
           >
+          {/* Click-catcher for any open picker (no visual overlay) */}
+{activePicker && (
+  <div
+    className="fixed inset-0 z-[9998]"
+    onClick={() => setActivePicker(null)}
+  />
+)}
             {/* Header */}
             <div className="relative flex items-center gap-3 p-3 pl-4 border-b border-black/10">
               <motion.div layoutId="caya-avatar" className="h-7 w-7 rounded-full overflow-hidden ring-1 ring-black/10">
@@ -246,21 +256,21 @@ export default function CayaChat({
 
                     {/* Reaction trigger (appears on hover) */}
                     <button
-                      className={[
-                        "absolute -top-3",
-                        isAssistant ? "left-2" : "right-2",
-                        "hidden group-hover:flex items-center justify-center h-6 w-6 rounded-full bg-white",
-                        "shadow ring-1 ring-black/10 text-sm",
-                      ].join(" ")}
-                      title="React"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActivePicker({ kind: "reaction", index: idx });
-                      }}
-                      type="button"
-                    >
-                      🙂
-                    </button>
+  className={[
+    "absolute -top-3",
+    isAssistant ? "left-2" : "right-2",
+    "hidden group-hover:flex items-center justify-center h-6 w-6 rounded-full bg-white",
+    "shadow ring-1 ring-black/10 text-sm",
+  ].join(" ")}
+  title="React"
+  onClick={(e) => {
+    e.stopPropagation();
+    setActivePicker({ kind: "reaction", index: idx });
+  }}
+>
+  🙂
+</button>
+
 
                     {/* Existing reaction chips */}
                     {reactionEntries.length > 0 && (
@@ -284,34 +294,36 @@ export default function CayaChat({
 
                     {/* Reaction picker (single popover, no second overlay) */}
                     <AnimatePresence>
-                      {activePicker?.kind === "reaction" && activePicker.index === idx && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.95, y: 4 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.95, y: 4 }}
-                          className={[
-                            "absolute z-[10000] -top-12",
-                            isAssistant ? "left-2" : "right-2",
-                            "rounded-xl bg-white shadow-xl ring-1 ring-black/10 px-1 py-1 flex gap-1",
-                          ].join(" ")}
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseLeave={() => setActivePicker(null)}
-                        >
-                          {QUICK_EMOJIS.slice(0, 7).map((e) => (
-                            <button
-                              key={e}
-                              className="h-7 w-7 rounded-md hover:bg-black/5"
-                              onClick={() => addReaction(idx, e)}
-                              title={e}
-                              type="button"
-                            >
-                              {e}
-                            </button>
-                          ))}
-                          <div className="absolute -bottom-1 left-4 h-2 w-2 rotate-45 bg-white ring-1 ring-black/10" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+  {activePicker?.kind === "reaction" && activePicker.index === idx && (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: 4 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: 4 }}
+      className={[
+        "absolute z-[10000] -top-12",
+        isAssistant ? "left-2" : "right-2",
+        "rounded-xl bg-white shadow-xl ring-1 ring-black/10 px-1 py-1 flex gap-1",
+      ].join(" ")}
+      onMouseLeave={() => setActivePicker(null)}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {QUICK_EMOJIS.slice(0, 7).map((e) => (
+        <button
+          key={e}
+          className="h-7 w-7 rounded-md hover:bg-black/5"
+          onClick={() => { addReaction(idx, e); setActivePicker(null); }}
+          title={e}
+          type="button"
+        >
+          {e}
+        </button>
+      ))}
+      <div className="absolute -bottom-1 left-4 h-2 w-2 rotate-45 bg-white ring-1 ring-black/10" />
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
                   </div>
                 );
               })}
@@ -337,17 +349,16 @@ export default function CayaChat({
                 {/* Emoji toggle */}
                 <div className="relative shrink-0">
                   <button
-                    ref={emojiBtnRef}
-                    type="button"
-                    aria-label="Insert emoji"
-                    className="h-11 w-11 rounded-xl border border-black/10 grid place-items-center hover:bg-black/5"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActivePicker((p) => (p?.kind === "composer" ? null : { kind: "composer" }));
-                    }}
-                  >
-                    🙂
-                  </button>
+  type="button"
+  aria-label="Insert emoji"
+  className="h-11 w-11 rounded-xl border border-black/10 grid place-items-center hover:bg-black/5"
+  onClick={(e) => {
+    e.stopPropagation();
+    setActivePicker(p => (p?.kind === "composer" ? null : { kind: "composer" }));
+  }}
+>
+  🙂
+</button>
 
                   {/* Composer emoji picker */}
                   <AnimatePresence>
