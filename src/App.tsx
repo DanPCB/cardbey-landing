@@ -2,7 +2,6 @@ import React, { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import ScrollToTop from "@/components/ScrollToTop";
-import CayaChatWidget from "@/components/CayaChatWidget";
 
 const Home = lazy(() => import("@/pages/Home"));
 const SignupOCR = lazy(() => import("@/pages/SignupOCR"));
@@ -24,8 +23,7 @@ export default function App(): JSX.Element {
     <Router>
       <ScrollToTop />
       {/* Global floating chat widget */}
-      <CayaChatWidget />
-      <Suspense fallback={null}>
+            <Suspense fallback={null}>
         <AnimatedRoutes />
       </Suspense>
     </Router>
