@@ -1,5 +1,6 @@
 // src/pages/Home.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
 import bgVideo from "../assets/sample.mp4";
 import heroMp4 from "@/assets/hero.mp4";
@@ -12,9 +13,20 @@ import step3 from "../assets/slides/step3_review.png";
 import step4 from "../assets/slides/step4_share.png";
 import LanguageToggle from "../components/LanguageToggle";
 // If you don't have path aliases, keep these relative imports:
-import Page from "../components/Page";
 import CayaChat from "../components/CayaChat";
 import CayaButton from "../components/CayaButton";
+
+function Page({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } }}
+      exit={{ opacity: 0, y: -8, transition: { duration: 0.25, ease: "easeIn" } }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 
 // --- Replace these with live links before shipping ---
