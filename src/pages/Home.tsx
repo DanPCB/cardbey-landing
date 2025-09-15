@@ -1,4 +1,5 @@
 // src/pages/Home.tsx
+import Page from "@/components/Page"; 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
@@ -16,17 +17,7 @@ import LanguageToggle from "../components/LanguageToggle";
 import CayaChat from "../components/CayaChat";
 import CayaButton from "../components/CayaButton";
 
-function Page({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } }}
-      exit={{ opacity: 0, y: -8, transition: { duration: 0.25, ease: "easeIn" } }}
-    >
-      {children}
-    </motion.div>
-  );
-}
+
 
 
 // --- Replace these with live links before shipping ---
