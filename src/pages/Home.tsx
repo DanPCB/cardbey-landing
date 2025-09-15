@@ -1,5 +1,5 @@
 // src/pages/Home.tsx
-import Page from "@/components/Page"; 
+import Page from "../components/Page"; 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
