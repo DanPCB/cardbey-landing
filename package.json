@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port 5174 --strictPort",
+    "dev": "vite --host 0.0.0.0 --port 5176",
     "build": "vite build",
-    "preview": "vite preview --host --port 5174"
+    "preview": "vite preview --host 0.0.0.0 --port 5176"
   },
   "dependencies": {
     "framer-motion": "^12.23.12",

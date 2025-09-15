@@ -1,31 +1,28 @@
-import React, { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
-import ScrollToTop from "@/components/ScrollToTop";
+﻿import { useState } from "react";
+import Home from "@/pages/Home";
+import CayaChat from "@/components/CayaChat";
 
-const Home = lazy(() => import("@/pages/Home"));
-const SignupOCR = lazy(() => import("@/pages/SignupOCR"));
+export default function App() {
+  const [open, setOpen] = useState(false); // closed by default
 
-function AnimatedRoutes() {
-  const location = useLocation();
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Home />} />
-        <Route path="/signup/ocr" element={<SignupOCR />} />
-      </Routes>
-    </AnimatePresence>
-  );
-}
+    <>
+      <Home />
 
-export default function App(): JSX.Element {
-  return (
-    <Router>
-      <ScrollToTop />
-      {/* Global floating chat widget */}
-            <Suspense fallback={null}>
-        <AnimatedRoutes />
-      </Suspense>
-    </Router>
+      {/* small launcher button */}
+      <button
+        aria-label="Open chat"
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed", right: 24, bottom: 24, width: 56, height: 56,
+          borderRadius: 9999, boxShadow: "0 6px 20px rgba(0,0,0,.2)",
+        }}
+      >
+        💬
+      </button>
+
+      {/* chat modal */}
+      <CayaChat open={open} onClose={() => setOpen(false)} />
+    </>
   );
 }

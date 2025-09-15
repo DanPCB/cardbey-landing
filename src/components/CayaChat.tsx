@@ -17,24 +17,17 @@ type ActivePicker =
   | null
   | { kind: "composer" }
   | { kind: "reaction"; index: number };
+  export default function CayaChat({ open, onClose }: { open:boolean; onClose:()=>void }) {
 
-const [activePicker, setActivePicker] = useState<ActivePicker>(null);
+const [activePicker, setActivePicker] = useState<null | {kind:"composer"} | {kind:"reaction"; index:number}>(null);
 
-export default function CayaChat({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
     { role: "assistant", content: "Hi! I’m Caya. What would you like to set up first?" },
   ]);
 
-  const [activePicker, setActivePicker] = useState<ActivePicker>(null);
-
+ 
   // refs
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
