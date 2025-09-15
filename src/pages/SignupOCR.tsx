@@ -1,5 +1,7 @@
 import React, { useState } from "react";
-import Page from "@/components/Page";
+// src/pages/SignupOCR.tsx
+import Page from "../components/Page";
+
 
 
 
