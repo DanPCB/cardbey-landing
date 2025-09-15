@@ -588,7 +588,7 @@ useEffect(() => {
 
       {/* Caya launcher & chat (mounted once) */}
       <CayaChat open={chatOpen} onClose={() => setChatOpen(false)} />
-      {!chatOpen && <CayaButton onClick={() => setChatOpen(true)} size={110} />}
+{!chatOpen && <CayaButton onClick={() => setChatOpen(true)} size={110} />}
     </Page>
   );
 }
