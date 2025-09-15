@@ -11,6 +11,12 @@ const CHAT_ENDPOINT = import.meta.env?.VITE_CHAT_ENDPOINT || "/api/chat";
 const MODEL = "grok-2-1212";
 const QUICK_EMOJIS = ["👍", "✅", "😊", "🎉", "❤️", "🤔", "🔥", "👏", "👌", "🙌"];
 
+// One source of truth for which (if any) picker is open
+type ActivePicker =
+  | null
+  | { kind: "composer" }
+  | { kind: "reaction"; index: number };
+
 export default function CayaChat({
   open,
   onClose,
@@ -24,27 +30,40 @@ export default function CayaChat({
     { role: "assistant", content: "Hi! I’m Caya. What would you like to set up first?" },
   ]);
 
-  // UI state
-  const [pickerOpen, setPickerOpen] = useState(false);              // input emoji picker
-  const [reactPickerFor, setReactPickerFor] = useState<number | null>(null); // message reaction picker
+  const [activePicker, setActivePicker] = useState<ActivePicker>(null);
 
   // refs
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const emojiBtnRef = useRef<HTMLButtonElement>(null);
 
-  // ----- helpers -----
+  // keep scrolled to bottom when new messages arrive
   useEffect(() => {
     if (!open) return;
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [open, messages.length, loading]);
 
+  // close pickers on click-outside / Esc
+  useEffect(() => {
+    const onDocClick = () => setActivePicker(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActivePicker(null);
+    };
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("click", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
   const payloadMessages = useMemo<Msg[]>(
     () => [{ role: "system", content: "You are Caya, Cardbey’s helpful AI assistant." }, ...messages],
     [messages]
   );
 
-  // very defensive extraction across API shapes
+  // Very defensive extraction across API shapes
   const extractText = (raw: any): string => {
     try {
       if (!raw) return "";
@@ -98,15 +117,14 @@ export default function CayaChat({
       next[idx] = msg;
       return next;
     });
-    setReactPickerFor(null);
+    setActivePicker(null);
   };
 
   const send = async () => {
     const text = input.trim();
     if (!text || loading) return;
 
-    setPickerOpen(false);        // ensure input picker closed while sending
-    setReactPickerFor(null);     // be safe
+    setActivePicker(null); // ensure no picker overlays while sending
 
     const userMsg: Msg = { role: "user", content: text };
     setMessages((m) => [...m, userMsg]);
@@ -125,15 +143,15 @@ export default function CayaChat({
       });
 
       const bodyText = await res.text();
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${bodyText?.slice(0, 180)}`);
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}: ${bodyText?.slice(0, 180)}`);
 
       let reply = extractText(bodyText);
       if (!reply) {
         try {
           reply = extractText(JSON.parse(bodyText));
-        } catch {/* ignore */}
+        } catch {
+          /* ignore */
+        }
       }
       if (!reply) throw new Error("Empty reply from server");
 
@@ -163,20 +181,18 @@ export default function CayaChat({
     }
   };
 
-  // ----- UI -----
   return (
     <AnimatePresence>
       {open && (
         <>
-          {/* Chat modal backdrop */}
+          {/* Backdrop for the chat modal (single overlay) */}
           <motion.div
             className="fixed inset-0 z-[9998] bg-black/30"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => {
-              setPickerOpen(false);
-              setReactPickerFor(null);
+              setActivePicker(null);
               onClose();
             }}
           />
@@ -190,6 +206,7 @@ export default function CayaChat({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 320, damping: 24, mass: 0.6 }}
+            onClick={(e) => e.stopPropagation()} // prevent backdrop close when clicking inside
           >
             {/* Header */}
             <div className="relative flex items-center gap-3 p-3 pl-4 border-b border-black/10">
@@ -199,8 +216,7 @@ export default function CayaChat({
               <div className="font-medium">Chat with Caya</div>
               <button
                 onClick={() => {
-                  setPickerOpen(false);
-                  setReactPickerFor(null);
+                  setActivePicker(null);
                   onClose();
                 }}
                 className="ml-auto rounded-full p-1 hover:bg-black/5"
@@ -228,7 +244,7 @@ export default function CayaChat({
                       {m.content}
                     </motion.div>
 
-                    {/* react button */}
+                    {/* Reaction trigger (appears on hover) */}
                     <button
                       className={[
                         "absolute -top-3",
@@ -237,15 +253,16 @@ export default function CayaChat({
                         "shadow ring-1 ring-black/10 text-sm",
                       ].join(" ")}
                       title="React"
-                      onClick={() => {
-                        setReactPickerFor(idx); // open reactions for this message
-                        setPickerOpen(false);   // close input emoji picker
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActivePicker({ kind: "reaction", index: idx });
                       }}
+                      type="button"
                     >
                       🙂
                     </button>
 
-                    {/* reactions chips */}
+                    {/* Existing reaction chips */}
                     {reactionEntries.length > 0 && (
                       <div
                         className={[
@@ -265,9 +282,9 @@ export default function CayaChat({
                       </div>
                     )}
 
-                    {/* reaction picker (popover) */}
+                    {/* Reaction picker (single popover, no second overlay) */}
                     <AnimatePresence>
-                      {reactPickerFor === idx && (
+                      {activePicker?.kind === "reaction" && activePicker.index === idx && (
                         <motion.div
                           initial={{ opacity: 0, scale: 0.95, y: 4 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -277,7 +294,8 @@ export default function CayaChat({
                             isAssistant ? "left-2" : "right-2",
                             "rounded-xl bg-white shadow-xl ring-1 ring-black/10 px-1 py-1 flex gap-1",
                           ].join(" ")}
-                          onMouseLeave={() => setReactPickerFor(null)}
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseLeave={() => setActivePicker(null)}
                         >
                           {QUICK_EMOJIS.slice(0, 7).map((e) => (
                             <button
@@ -300,14 +318,14 @@ export default function CayaChat({
 
               {loading && (
                 <div className="inline-flex items-center gap-1 rounded-2xl bg-zinc-100 px-3 py-2 shadow-sm">
-                  <span className="h-2 w-2 rounded-full bg-violet-500 animate-bounce [animation-delay:0ms]" />
-                  <span className="h-2 w-2 rounded-full bg-violet-500 animate-bounce [animation-delay:120ms]" />
-                  <span className="h-2 w-2 rounded-full bg-violet-500 animate-bounce [animation-delay:240ms]" />
+                  <span className="h-2 w-2 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="h-2 w-2 rounded-full animate-bounce [animation-delay:120ms]" />
+                  <span className="h-2 w-2 rounded-full animate-bounce [animation-delay:240ms]" />
                 </div>
               )}
             </div>
 
-            {/* Input */}
+            {/* Composer */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -319,26 +337,28 @@ export default function CayaChat({
                 {/* Emoji toggle */}
                 <div className="relative shrink-0">
                   <button
+                    ref={emojiBtnRef}
                     type="button"
                     aria-label="Insert emoji"
                     className="h-11 w-11 rounded-xl border border-black/10 grid place-items-center hover:bg-black/5"
-                    onClick={() => {
-                      setPickerOpen((s) => !s);
-                      setReactPickerFor(null); // close message reaction picker
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActivePicker((p) => (p?.kind === "composer" ? null : { kind: "composer" }));
                     }}
                   >
                     🙂
                   </button>
 
-                  {/* Input emoji picker */}
+                  {/* Composer emoji picker */}
                   <AnimatePresence>
-                    {pickerOpen && (
+                    {activePicker?.kind === "composer" && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.96, y: 6 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.96, y: 6 }}
                         className="absolute bottom-12 left-0 z-[10000] rounded-xl bg-white shadow-2xl ring-1 ring-black/10 p-2 grid grid-cols-6 gap-1"
-                        onMouseLeave={() => setPickerOpen(false)}
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseLeave={() => setActivePicker(null)}
                       >
                         {QUICK_EMOJIS.map((e) => (
                           <button
